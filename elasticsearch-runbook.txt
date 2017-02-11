@@ -5,3 +5,7 @@ curl -XGET 'http://localhost:9200/_cat/indices?v'
 2. find mapings for specific indexes - aafiya_details
 
 curl -XGET "http://localhost:9200/aafiya_details/_mapping"
+curl -XGET "http://localhost:9200/nas_details/_mapping"
+
+3. search sample 2 rows
+curl -XGET "http://localhost:9200/nas_details/nas_claim_details/_search?size=2&pretty=true"
