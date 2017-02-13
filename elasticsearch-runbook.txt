@@ -24,4 +24,3 @@ curl -XGET 'http://localhost:9200/nas_details/nas_claim_details/_search?size=10&
     }
   }
 }'
-
