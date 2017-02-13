@@ -9,3 +9,19 @@ curl -XGET "http://localhost:9200/nas_details/_mapping"
 
 3. search sample 2 rows
 curl -XGET "http://localhost:9200/nas_details/nas_claim_details/_search?size=2&pretty=true"
+
+4. selective filter and extract data
+
+curl -XGET 'http://localhost:9200/nas_details/nas_claim_details/_search?size=10&pretty=true' -d '
+{
+	"fields" :  ["ITEM", "STATUS","PROVIDER","NETWORKTYPE","BENEFSTATUS","TREATMENTDATE","PROFESSIONAL","CLAIMEDAMOUNT","CHRONIC","SPECASSESSMENT"],
+   "query": {
+    "bool": {
+      "must": [
+	  {"match": {"PROVIDERTYPE": "Pharmacy"}},
+	  { "match": { "FOB":"Out-Patient" }}
+	  ]
+    }
+  }
+}'
+
