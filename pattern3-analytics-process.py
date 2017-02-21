@@ -11,6 +11,16 @@ import re
 #COMMON
 nlp = spacy.load('en')
 ###################################################################################################
+#M2
+def translateItems():
+	try:
+		
+	#try
+	except:
+		traceback.print_exc()
+	#except
+#M2
+###################################################################################################
 #M1
 def  loadNas_Details_Data4mElasticSearch():
 	try:
