@@ -14,7 +14,7 @@ curl -XGET "http://localhost:9200/nas_details/nas_claim_details/_search?size=2&p
 
 curl -XGET 'http://localhost:9200/nas_details/nas_claim_details/_search?size=10&pretty=true' -d '
 {
-	"fields" :  ["ITEM", "STATUS","PROVIDER","NETWORKTYPE","BENEFSTATUS","TREATMENTDATE","PROFESSIONAL","CLAIMEDAMOUNT","ITEMPAYERSHARE","CHRONIC","SPECASSESSMENT"],
+"fields" :  ["ITEM", "STATUS","PROVIDER","NETWORKTYPE","BENEFSTATUS","TREATMENTDATE","PROFESSIONAL","CLAIMEDAMOUNT","ITEMPAYERSHARE","CHRONIC","SPECASSESSMENT"],
    "query": {
     "bool": {
       "must": [
@@ -24,3 +24,20 @@ curl -XGET 'http://localhost:9200/nas_details/nas_claim_details/_search?size=10&
     }
   }
 }'
+
+
+curl -XGET 'http://localhost:9200/aafiya_details/aafiya_claim_details/_search?size=2&pretty=true' -d '
+{
+"fields" :  ["TREATMENT DATE", "SERVICECODE","CLIENT GROUP","MEMBER NAME","PROVIDER TYPE","CLAIM TYPE","FINAL AMT","PROVIDER GROUP","PROVIDER NAME","ATTENDING DOCTOR NAME","ICD DESCRIPTION","CURRENCY"],
+"query": {
+"bool": {
+"must": [
+{"match": {"CLAIM\/APPROVAL STATUS": "APPROVED"}},
+{ "match": { "IP\/OP":"OPD" }},
+{ "match": { "PAYMENTSTATUS":"PAID CLAIM" }}
+]
+    }
+  }
+}'
+
+  
