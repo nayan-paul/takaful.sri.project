@@ -22,7 +22,7 @@ def standardizeICD(val):
 			#if
 		#for	
 		regxLst.sort()
-		return  ",".join(regxLst)
+		return  "~".join(regxLst)
 	#try
 	except:
 		traceback.print_exc()
@@ -249,18 +249,17 @@ def normalizeAafiaData():
 		inputDF = pd.read_csv('/opt/takaful/processed-data/pattern3-aafia-input.csv',delimiter='^')
 		
 		#inputDF = inputDF.replace(r'\s+',np.nan,regex=True)
-		inputDF.dropna(subset=['PROVIDERGROUP','ATTENDINGDOCTIRNAME','ICDDESCRIPTION','SERVICEDESCRIPTION'],inplace=True)
+		inputDF.dropna(subset=['PROVIDERGROUP','PROVIDERNAME','ATTENDINGDOCTIRNAME','ICDDESCRIPTION','SERVICEDESCRIPTION'],inplace=True)
 		
 		inputDF = inputDF.drop(inputDF[inputDF['ICDDESCRIPTION'].str.contains('NONE')].index)
 		inputDF['SERVICEDESCRIPTION'] = inputDF.apply(lambda row : str(row['SERVICEDESCRIPTION']).strip(),axis=1)		
 		
 		#report 1 = CLIENTGROUP,PROVIDERTYPE,CLAIMTYPE,PROVIDERGROUP,PROVIDERNAME,ICDDESCRIPTION,SERVICEDESCRIPTION,ATTENDINGDOCTIRNAME
 		
-		inputDF = inputDF.groupby(['PROVIDERGROUP','ATTENDINGDOCTIRNAME','ICDDESCRIPTION','SERVICEDESCRIPTION']).agg({'FINALAMT':[np.sum,np.mean,np.max,np.min],'SERVICECODE':np.size}).reset_index().rename(columns={'sum':'sum_finalamt','mean':'mean_finalamt','amin':'min_finalamt','amax':'max_finalamt','size':'occurance'})
+		inputDF = inputDF.groupby(['PROVIDERGROUP','PROVIDERNAME','ATTENDINGDOCTIRNAME','ICDDESCRIPTION','SERVICEDESCRIPTION']).agg({'FINALAMT':[np.sum,np.mean,np.max,np.min],'SERVICECODE':np.size}).reset_index().rename(columns={'sum':'sum_finalamt','mean':'mean_finalamt','amin':'min_finalamt','amax':'max_finalamt','size':'occurance'})
 		
-		inputDF.columns =['PROVIDERGROUP','ATTENDINGDOCTIRNAME','ICDDESCRIPTION','SERVICEDESCRIPTION','occurance','sum_finalamt','mean_finalamt','max_finalamt','min_finalamt']
+		inputDF.columns =['PROVIDERGROUP','PROVIDERNAME','ATTENDINGDOCTIRNAME','ICDDESCRIPTION','SERVICEDESCRIPTION','occurance','sum_finalamt','mean_finalamt','max_finalamt','min_finalamt']
 	
-		print inputDF['SERVICEDESCRIPTION'].unique()
 		def processPercentDisribution(row):
 			try:
 				total = inputDF.ix[(inputDF['PROVIDERGROUP']==row['PROVIDERGROUP']) & (inputDF['ATTENDINGDOCTIRNAME']==row['ATTENDINGDOCTIRNAME']) &  (inputDF['ICDDESCRIPTION']==row['ICDDESCRIPTION']) ]['occurance'].sum()
@@ -270,7 +269,7 @@ def normalizeAafiaData():
 				traceback.print_exc()
 			#except
 		#def
-		inputDF['percentdistribution_provider_icd'] = inputDF.apply(lambda row: processPercentDisribution(row),axis=1)
+		#inputDF['percentdistribution_provider_icd'] = inputDF.apply(lambda row: processPercentDisribution(row),axis=1)
 		inputDF.to_csv('/opt/takaful/processed-data/pattern3-aafia-report1.csv',header=True,index=False,index_label=False)
 	#try
 	except:
