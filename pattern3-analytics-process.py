@@ -13,6 +13,7 @@ import numpy as np
 nlp = spacy.load('en')
 ICD_REGEX = re.compile(r'.*([A-Z].*)-.*')
 SPEC_REGEX = re.compile(r'([A-Z]\d+[\.]?\d*)\s+.*')
+NEXT_REGEX = re.compile(r'(\d+[\.]?\d*)\s+.*')
 
 def standardizeICD(val):
 	try:
@@ -36,6 +37,23 @@ def standardizeSpecAssesment(val):
 		regxLst = []
 		for tmp in val.split(','):
 			match = re.findall(SPEC_REGEX,tmp)
+			if match:
+				regxLst.append( match[0])
+			#if
+		#for	
+		regxLst.sort()
+		return  "~".join(regxLst)
+	#try
+	except:
+		traceback.print_exc()
+	#except
+#def
+
+def standardizeSpec4NextCare(val):
+	try:
+		regxLst = []
+		for tmp in val.split(','):
+			match = re.findall(NEXT_REGEX,tmp)
 			if match:
 				regxLst.append( match[0])
 			#if
@@ -261,6 +279,92 @@ def normalizeAafiaData():
 	#finally
 #M4
 ###################################################################################################
+#M5
+def loadNextCare4mElasticSearch():
+	try:
+		query=json.dumps({
+		"size": 9000000,
+		"fields" :  ["Provider","DischargeDate","ItemName", "SpecAssessment","PayerShare","Physician Name","ClaimCurrDesc"],
+		"query": {
+		"bool": {
+		"should":[{ "match": { "Service":"Pharmacy and Vaccinations" }},{ "match": { "Service":"Medicine" }}],
+		"must": [
+		{"match": {"ClaimStatus": "Settled"}},
+		{ "match": { "FOB":"Out-Patient" }}
+		]
+		}
+		}
+		})
+		response = requests.post('http://localhost:9200/nextcare3_p2/claim/_search?scroll=9m', data=query)
+		
+		jsonDoc = json.loads(response.text)
+		
+		file = open('/opt/takaful/processed-data/pattern3-nextcare-input.csv','w')
+		file.write("PROVIDER^DISCHARGEDATE^ITEMNAME^SPECASSESSMENT^PAYERSHARE^DOCTORNAME^CURRENCY\n")
+		for obj in jsonDoc['hits']['hits']:
+			row="PH01^PH02^PH03^PH04^PH05^PH06^PH07"
+			for key,val in  obj['fields'].iteritems():
+				if  'Provider'==key:
+					row=row.replace('PH01',val[0])
+				#if
+				elif  'DischargeDate'==key:
+					row=row.replace('PH02',val[0])
+				#if
+				elif  'ItemName'==key:
+					row=row.replace('PH03',val[0].upper())
+				#if
+				elif  'SpecAssessment'==key:
+					row=row.replace('PH04',standardizeSpec4NextCare(val[0]))
+				#if
+				elif  'PayerShare'==key:
+					row=row.replace('PH05',val[0])
+				#if
+				elif  'Physician Name'==key:
+					row=row.replace('PH06',val[0])
+				#if
+				elif  'ClaimCurrDesc'==key:
+					row=row.replace('PH07',val[0])
+				#if
+			#for
+			file.write(str(row.encode('utf-8').strip())+'\n')
+		#for
+		file.close()
+	#try
+	except:
+		traceback.print_exc()
+	#except
+	finally:
+		print 'end of process...'
+	#finally
+#M5
+###################################################################################################
+#M6
+def normalizeNextCareData():
+	try:
+		inputDF = pd.read_csv('/opt/takaful/processed-data/pattern3-nextcare-input.csv',delimiter='^',error_bad_lines=False)
+		
+		inputDF.dropna(subset=['PROVIDER','DISCHARGEDATE','ITEMNAME','SPECASSESSMENT','PAYERSHARE','DOCTORNAME','CURRENCY'],inplace=True)
+		
+		inputDF = inputDF.drop(inputDF[inputDF['SPECASSESSMENT'].str.contains('NONE')].index)
+		inputDF['SPECASSESSMENT'] = inputDF.apply(lambda row : str(row['SPECASSESSMENT']).strip(),axis=1)		
+		
+		#report 1 = CLIENTGROUP,PROVIDERTYPE,CLAIMTYPE,PROVIDERGROUP,PROVIDERNAME,ICDDESCRIPTION,SERVICEDESCRIPTION,ATTENDINGDOCTIRNAME
+		
+		inputDF = inputDF.groupby(['PROVIDER','DOCTORNAME','ITEMNAME','SPECASSESSMENT']).agg({'PAYERSHARE':[np.sum,np.mean,np.max,np.min],'DISCHARGEDATE':np.size}).reset_index().rename(columns={'sum':'sum_finalamt','mean':'mean_finalamt','amin':'min_finalamt','amax':'max_finalamt','size':'occurance'})
+		
+		inputDF.columns =['PROVIDERNAME','ATTENDINGDOCTIRNAME','ICDDESCRIPTION','SERVICEDESCRIPTION','occurance','sum_finalamt','mean_finalamt','max_finalamt','min_finalamt']
+		inputDF['PROVIDERGROUP']=''
+		print inputDF['ATTENDINGDOCTIRNAME'].unique()
+		inputDF.to_csv('/opt/takaful/processed-data/pattern3-nextcare-report1.csv',header=True,index=False,index_label=False,sep='^')
+	#try
+	except:
+		traceback.print_exc()
+	#except
+	finally:
+		print 'end of process...'
+	#finally
+#M6
+###################################################################################################
 if __name__=='__main__':
 	if sys.argv[1]=='1':
 		loadNas_Details_Data4mElasticSearch()
@@ -273,6 +377,12 @@ if __name__=='__main__':
 	#if
 	if sys.argv[1]=='4':
 		normalizeAafiaData()
+	#if
+	if sys.argv[1]=='5':
+		loadNextCare4mElasticSearch()
+	#if
+	if sys.argv[1]=='6':
+		normalizeNextCareData()
 	#if
 	if sys.argv[1]=='test':
 		print standardizeSpecAssesment('K58.9 Irritable bowel syndrome without diarrhea')

@@ -6,6 +6,7 @@ curl -XGET 'http://localhost:9200/_cat/indices?v'
 
 curl -XGET "http://localhost:9200/aafiya_details/_mapping"
 curl -XGET "http://localhost:9200/nas_details/_mapping"
+curl -XGET "http://localhost:9200/nextcare3_p2/_mapping"
 
 3. search sample 2 rows
 curl -XGET "http://localhost:9200/nas_details/nas_claim_details/_search?size=2&pretty=true"
@@ -41,4 +42,18 @@ curl -XGET 'http://localhost:9200/aafiya_details/aafiya_claim_details/_search?si
   }
 }'
 
-  
+
+curl -XGET 'http://localhost:9200/nextcare3_p2/claim/_search?size=5&pretty=true' -d '
+{
+"fields" :  ["Provider","DischargeDate","ItemName", "SpecAssessment","PayerShare","Physician Name","ClaimCurrDesc"],
+"query": {
+"bool": {
+"should":[{ "match": { "Service":"Pharmacy and Vaccinations" }},{ "match": { "Service":"Medicine" }}],
+"must": [
+{"match": {"ClaimStatus": "Settled"}},
+{ "match": { "FOB":"Out-Patient" }}
+]
+}
+}
+}'
+
