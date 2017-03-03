@@ -311,7 +311,7 @@ def loadNextCare4mElasticSearch():
 					row=row.replace('PH02',val[0])
 				#if
 				elif  'ItemName'==key:
-					row=row.replace('PH03',val[0].upper())
+					row=row.replace('PH03',re.sub(r'PHARMACY AND VACCINATIONS-','',val[0].upper()))
 				#if
 				elif  'SpecAssessment'==key:
 					row=row.replace('PH04',standardizeSpec4NextCare(val[0]))
@@ -352,9 +352,9 @@ def normalizeNextCareData():
 		
 		inputDF = inputDF.groupby(['PROVIDER','DOCTORNAME','ITEMNAME','SPECASSESSMENT']).agg({'PAYERSHARE':[np.sum,np.mean,np.max,np.min],'DISCHARGEDATE':np.size}).reset_index().rename(columns={'sum':'sum_finalamt','mean':'mean_finalamt','amin':'min_finalamt','amax':'max_finalamt','size':'occurance'})
 		
-		inputDF.columns =['PROVIDERNAME','ATTENDINGDOCTIRNAME','ICDDESCRIPTION','SERVICEDESCRIPTION','occurance','sum_finalamt','mean_finalamt','max_finalamt','min_finalamt']
+		inputDF.columns =['PROVIDERNAME','ATTENDINGDOCTIRNAME','SERVICEDESCRIPTION','ICDDESCRIPTION','occurance','sum_finalamt','mean_finalamt','max_finalamt','min_finalamt']
 		inputDF['PROVIDERGROUP']=''
-		print inputDF['ATTENDINGDOCTIRNAME'].unique()
+		
 		inputDF.to_csv('/opt/takaful/processed-data/pattern3-nextcare-report1.csv',header=True,index=False,index_label=False,sep='^')
 	#try
 	except:
@@ -364,6 +364,28 @@ def normalizeNextCareData():
 		print 'end of process...'
 	#finally
 #M6
+###################################################################################################
+#M7
+def mergeDatasets():
+	try:
+		nasDF = pd.read_csv('/opt/takaful/processed-data/pattern3-nas-report1.csv',error_bad_lines=False)
+		nasDF['TPA']='NAS'
+		aafiaDF = pd.read_csv('/opt/takaful/processed-data/pattern3-aafia-report1.csv',error_bad_lines=False)
+		aafiaDF['TPA']='AAFIA'
+		nextCareDF = pd.read_csv('/opt/takaful/processed-data/pattern3-nextcare-report1.csv',error_bad_lines=False,sep='^')
+		nextCareDF['TPA']='NEXTCARE'
+		
+		final = [nasDF, aafiaDF, nextCareDF]
+		result = pd.concat(final)
+		result.to_csv('/opt/takaful/processed-data/consolicated-report1.csv',header=True,index=False,index_label=False)
+	#try
+	except:
+		traceback.print_exc()
+	#except
+	finally:
+		print 'end of process...'
+	#finally
+#M7
 ###################################################################################################
 if __name__=='__main__':
 	if sys.argv[1]=='1':
@@ -383,6 +405,9 @@ if __name__=='__main__':
 	#if
 	if sys.argv[1]=='6':
 		normalizeNextCareData()
+	#if
+	if sys.argv[1]=='7':
+		mergeDatasets()
 	#if
 	if sys.argv[1]=='test':
 		print standardizeSpecAssesment('K58.9 Irritable bowel syndrome without diarrhea')
