@@ -45,7 +45,7 @@ curl -XGET 'http://localhost:9200/aafiya_details/aafiya_claim_details/_search?si
 
 curl -XGET 'http://localhost:9200/nextcare3_p2/claim/_search?size=5&pretty=true' -d '
 {
-"fields" :  ["Provider","DischargeDate","ItemName", "SpecAssessment","PayerShare","Physician Name","ClaimCurrDesc"],
+"fields" :  ["Provider","DischargeDate","ItemName", "SpecAssessment","PayerShare","Physician Name","ClaimCurrDesc","Service","ClaimStatus","FOB"],
 "query": {
 "bool": {
 "should":[{ "match": { "Service":"Pharmacy and Vaccinations" }},{ "match": { "Service":"Medicine" }}],
