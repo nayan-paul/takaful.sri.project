@@ -9,9 +9,11 @@ import re
 import numpy as np
 
 #thsi process is pattern 3 for takaful search - this pattern identifies medicines vs issues.
+
+#grep pattern3-nextcare-report1.csv -e 'PHARMACY AND VACCINATIONS'
 #COMMON
 nlp = spacy.load('en')
-ICD_REGEX = re.compile(r'.*([A-Z].*)-.*')
+ICD_REGEX = re.compile(r'.*([A-Z]\d+[\.]?\d*)-.*')
 SPEC_REGEX = re.compile(r'([A-Z]\d+[\.]?\d*)\s+.*')
 NEXT_REGEX = re.compile(r'(\d+[\.]?\d*)\s+.*')
 
@@ -21,7 +23,7 @@ def standardizeICD(val):
 		for tmp in val.split(')'):
 			match = re.findall(ICD_REGEX,tmp)
 			if match:
-				regxLst.append( match)
+				regxLst.append( match[0])
 			#if
 		#for	
 		regxLst.sort()
@@ -180,7 +182,7 @@ def  loadAafia_Details_Data4mElasticSearch():
 		{ "match": { "PROVIDER TYPE":"PHARMACY"}},
 		]} }
 		})
-		response = requests.post('http://localhost:9200/aafiya_details/aafiya_claim_details/_search?scroll=1m', data=query)
+		response = requests.post('http://localhost:9200/aafiya_details/aafiya_claim_details/_search?scroll=9m', data=query)
 		
 		jsonDoc = json.loads(response.text)
 		
@@ -259,6 +261,7 @@ def normalizeAafiaData():
 		
 		inputDF.columns =['PROVIDERGROUP','PROVIDERNAME','ATTENDINGDOCTIRNAME','ICDDESCRIPTION','SERVICEDESCRIPTION','occurance','sum_finalamt','mean_finalamt','max_finalamt','min_finalamt']
 	
+		inputDF = inputDF[['PROVIDERNAME','ATTENDINGDOCTIRNAME','ICDDESCRIPTION','SERVICEDESCRIPTION','occurance','sum_finalamt','mean_finalamt','max_finalamt','min_finalamt','PROVIDERGROUP']] 
 		def processPercentDisribution(row):
 			try:
 				total = inputDF.ix[(inputDF['PROVIDERGROUP']==row['PROVIDERGROUP']) & (inputDF['ATTENDINGDOCTIRNAME']==row['ATTENDINGDOCTIRNAME']) &  (inputDF['ICDDESCRIPTION']==row['ICDDESCRIPTION']) ]['occurance'].sum()
@@ -284,7 +287,7 @@ def loadNextCare4mElasticSearch():
 	try:
 		query=json.dumps({
 		"size": 9000000,
-		"fields" :  ["Provider","DischargeDate","ItemName", "SpecAssessment","PayerShare","Physician Name","ClaimCurrDesc"],
+		"fields" :  ["Provider","DischargeDate","ItemName", "SpecAssessment","PayerShare","Physician Name","ClaimCurrDesc","Service"],
 		"query": {
 		"bool": {
 		"should":[{ "match": { "Service":"Pharmacy and Vaccinations" }},{ "match": { "Service":"Medicine" }}],
@@ -303,7 +306,14 @@ def loadNextCare4mElasticSearch():
 		file.write("PROVIDER^DISCHARGEDATE^ITEMNAME^SPECASSESSMENT^PAYERSHARE^DOCTORNAME^CURRENCY\n")
 		for obj in jsonDoc['hits']['hits']:
 			row="PH01^PH02^PH03^PH04^PH05^PH06^PH07"
+			write2File =True
 			for key,val in  obj['fields'].iteritems():
+				if  'Service'==key:
+					if val[0]!="Medicine" and val[0].upper()!='PHARMACY AND VACCINATIONS'  :
+						write2File =False
+						break
+					#if
+				#if
 				if  'Provider'==key:
 					row=row.replace('PH01',val[0])
 				#if
@@ -311,7 +321,10 @@ def loadNextCare4mElasticSearch():
 					row=row.replace('PH02',val[0])
 				#if
 				elif  'ItemName'==key:
-					row=row.replace('PH03',re.sub(r'PHARMACY AND VACCINATIONS-','',val[0].upper()))
+					itm=val[0].upper()
+					itm = re.sub(r'PHARMACY AND VACCINATIONS-','',itm)
+					itm = re.sub(r'MEDICINE-','',itm)
+					row=row.replace('PH03',itm)
 				#if
 				elif  'SpecAssessment'==key:
 					row=row.replace('PH04',standardizeSpec4NextCare(val[0]))
@@ -326,7 +339,9 @@ def loadNextCare4mElasticSearch():
 					row=row.replace('PH07',val[0])
 				#if
 			#for
-			file.write(str(row.encode('utf-8').strip())+'\n')
+			if write2File :
+				file.write(str(row.encode('utf-8').strip())+'\n')
+			#if	
 		#for
 		file.close()
 	#try
@@ -344,15 +359,13 @@ def normalizeNextCareData():
 		inputDF = pd.read_csv('/opt/takaful/processed-data/pattern3-nextcare-input.csv',delimiter='^',error_bad_lines=False)
 		
 		inputDF.dropna(subset=['PROVIDER','DISCHARGEDATE','ITEMNAME','SPECASSESSMENT','PAYERSHARE','DOCTORNAME','CURRENCY'],inplace=True)
-		
-		inputDF = inputDF.drop(inputDF[inputDF['SPECASSESSMENT'].str.contains('NONE')].index)
 		inputDF['SPECASSESSMENT'] = inputDF.apply(lambda row : str(row['SPECASSESSMENT']).strip(),axis=1)		
 		
 		#report 1 = CLIENTGROUP,PROVIDERTYPE,CLAIMTYPE,PROVIDERGROUP,PROVIDERNAME,ICDDESCRIPTION,SERVICEDESCRIPTION,ATTENDINGDOCTIRNAME
 		
-		inputDF = inputDF.groupby(['PROVIDER','DOCTORNAME','ITEMNAME','SPECASSESSMENT']).agg({'PAYERSHARE':[np.sum,np.mean,np.max,np.min],'DISCHARGEDATE':np.size}).reset_index().rename(columns={'sum':'sum_finalamt','mean':'mean_finalamt','amin':'min_finalamt','amax':'max_finalamt','size':'occurance'})
+		inputDF = inputDF.groupby(['PROVIDER','DOCTORNAME','SPECASSESSMENT','ITEMNAME']).agg({'PAYERSHARE':[np.sum,np.mean,np.max,np.min],'DISCHARGEDATE':np.size}).reset_index().rename(columns={'sum':'sum_finalamt','mean':'mean_finalamt','amin':'min_finalamt','amax':'max_finalamt','size':'occurance'})
 		
-		inputDF.columns =['PROVIDERNAME','ATTENDINGDOCTIRNAME','SERVICEDESCRIPTION','ICDDESCRIPTION','occurance','sum_finalamt','mean_finalamt','max_finalamt','min_finalamt']
+		inputDF.columns =['PROVIDERNAME','ATTENDINGDOCTIRNAME','ICDDESCRIPTION','SERVICEDESCRIPTION','occurance','sum_finalamt','mean_finalamt','max_finalamt','min_finalamt']
 		inputDF['PROVIDERGROUP']=''
 		
 		inputDF.to_csv('/opt/takaful/processed-data/pattern3-nextcare-report1.csv',header=True,index=False,index_label=False,sep='^')
@@ -410,6 +423,6 @@ if __name__=='__main__':
 		mergeDatasets()
 	#if
 	if sys.argv[1]=='test':
-		print standardizeSpecAssesment('K58.9 Irritable bowel syndrome without diarrhea')
+		print standardizeICD('( J06.9-Acute upper respiratory infection; unspecified ) ( R05-Cough ) ( R50.9-Fever; unspecified )')
 	#if
 #if
