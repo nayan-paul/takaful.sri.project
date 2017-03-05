@@ -175,12 +175,15 @@ def  loadAafia_Details_Data4mElasticSearch():
 		"fields" :  ["TREATMENT DATE", "SERVICECODE","CLIENT GROUP","MEMBER NAME","CLAIM TYPE","FINAL AMT","PROVIDER GROUP","PROVIDER NAME","ATTENDING DOCTOR NAME","ICD DESCRIPTION","CURRENCY","SERVICEDESCRIPTION"],
 		"query": {
 		"bool": {
-		"must": [
-		{"match": {"CLAIM/APPROVAL STATUS": "APPROVED"}},
-		{ "match": { "IP/OP":"OPD" }},
-		{ "match": { "PAYMENTSTATUS":"PAID CLAIM"}},
-		{ "match": { "PROVIDER TYPE":"PHARMACY"}},
-		]} }
+		"must": [	
+		{ "match": { "IP\/OP":"OPD" }},
+		{ "match": { "PAYMENTSTATUS":"PAID CLAIM" }}
+		],
+		"must_not": [
+		{"match": {"CLAIM\/APPROVAL STATUS": "Rejected"}}
+		]
+		}
+		}
 		})
 		response = requests.post('http://localhost:9200/aafiya_details/aafiya_claim_details/_search?scroll=9m', data=query)
 		
@@ -294,6 +297,9 @@ def loadNextCare4mElasticSearch():
 		"must": [
 		{"match": {"ClaimStatus": "Settled"}},
 		{ "match": { "FOB":"Out-Patient" }}
+		],
+		"must": [
+		{"match": {"ProvChequeNumber": "Denied"}}
 		]
 		}
 		}
