@@ -33,13 +33,15 @@ curl -XGET 'http://localhost:9200/aafiya_details/aafiya_claim_details/_search?si
 "fields" :  ["TREATMENT DATE", "SERVICECODE","CLIENT GROUP","MEMBER NAME","PROVIDER TYPE","CLAIM TYPE","FINAL AMT","PROVIDER GROUP","PROVIDER NAME","ATTENDING DOCTOR NAME","ICD DESCRIPTION","CURRENCY","SERVICEDESCRIPTION"],
 "query": {
 "bool": {
-"must": [
-{"match": {"CLAIM\/APPROVAL STATUS": "APPROVED"}},
+"must": [	
 { "match": { "IP\/OP":"OPD" }},
 { "match": { "PAYMENTSTATUS":"PAID CLAIM" }}
+],
+"must_not": [
+{"match": {"CLAIM\/APPROVAL STATUS": "Rejected"}}
 ]
-    }
-  }
+}
+}
 }'
 
 
@@ -52,6 +54,9 @@ curl -XGET 'http://localhost:9200/nextcare3_p2/claim/_search?size=5&pretty=true'
 "must": [
 {"match": {"ClaimStatus": "Settled"}},
 { "match": { "FOB":"Out-Patient" }}
+],
+"must": [
+{"match": {"ProvChequeNumber": "Denied"}}
 ]
 }
 }
