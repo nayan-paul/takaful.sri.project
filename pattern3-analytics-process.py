@@ -82,7 +82,7 @@ def  loadNas_Details_Data4mElasticSearch():
 		{ "match": { "STATUS":"Settled" }}
 		]} }
 		})
-		response = requests.post('http://localhost:9200/nas_details/nas_claim_details/_search?scroll=1m', data=query)
+		response = requests.post('http://localhost:9200/nas_details/nas_claim_details/_search?scroll=9m', data=query)
 		
 		jsonDoc = json.loads(response.text)
 		file = open('/opt/takaful/processed-data/pattern3-nas-input.csv','w')
@@ -175,15 +175,14 @@ def  loadAafia_Details_Data4mElasticSearch():
 		"fields" :  ["TREATMENT DATE", "SERVICECODE","CLIENT GROUP","MEMBER NAME","CLAIM TYPE","FINAL AMT","PROVIDER GROUP","PROVIDER NAME","ATTENDING DOCTOR NAME","ICD DESCRIPTION","CURRENCY","SERVICEDESCRIPTION"],
 		"query": {
 		"bool": {
-		"must": [	
-		{ "match": { "IP\/OP":"OPD" }},
-		{ "match": { "PAYMENTSTATUS":"PAID CLAIM" }}
+		"must": [
+		{ "match": { "IP/OP":"OPD" }},
+		{ "match": { "PAYMENTSTATUS":"PAID CLAIM"}},
+		{ "match": { "PROVIDER TYPE":"PHARMACY"}},
 		],
 		"must_not": [
 		{"match": {"CLAIM\/APPROVAL STATUS": "Rejected"}}
-		]
-		}
-		}
+		]} }
 		})
 		response = requests.post('http://localhost:9200/aafiya_details/aafiya_claim_details/_search?scroll=9m', data=query)
 		
@@ -298,7 +297,7 @@ def loadNextCare4mElasticSearch():
 		{"match": {"ClaimStatus": "Settled"}},
 		{ "match": { "FOB":"Out-Patient" }}
 		],
-		"must": [
+		"must_not": [
 		{"match": {"ProvChequeNumber": "Denied"}}
 		]
 		}
