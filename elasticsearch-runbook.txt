@@ -55,7 +55,7 @@ curl -XGET 'http://localhost:9200/nextcare3_p2/claim/_search?size=5&pretty=true'
 {"match": {"ClaimStatus": "Settled"}},
 { "match": { "FOB":"Out-Patient" }}
 ],
-"must": [
+"must_not": [
 {"match": {"ProvChequeNumber": "Denied"}}
 ]
 }
