@@ -7,11 +7,13 @@ import pandas as pd
 import spacy
 import re
 import numpy as np
+from datetime import datetime
 
 #thsi process is pattern 3 for takaful search - this pattern identifies medicines vs issues.
 
 #grep pattern3-nextcare-report1.csv -e 'PHARMACY AND VACCINATIONS'
 #COMMON
+###################################################################################################
 nlp = spacy.load('en')
 ICD_REGEX = re.compile(r'.*([A-Z]\d+[\.]?\d*)-.*')
 SPEC_REGEX = re.compile(r'([A-Z]\d+[\.]?\d*)\s+.*')
@@ -67,13 +69,15 @@ def standardizeSpec4NextCare(val):
 		traceback.print_exc()
 	#except
 #def
+
+currentTime = datetime.utcnow()
 ###################################################################################################
 #M1
 def  loadNas_Details_Data4mElasticSearch():
 	try:
 		query=json.dumps({
 		"size": 9000000,
-		"fields" :  ["PROVIDER","PROFESSIONAL","SPECASSESSMENT","ITEMPAYERSHARE","ITEM","TREATMENTDATE","CHRONIC"],
+		"fields" :  ["PROVIDER","PROFESSIONAL","SPECASSESSMENT","ITEMPAYERSHARE","ITEM","TREATMENTDATE","CHRONIC","BENEFICIARY","EMPID"],
 		"query": {
 		"bool": {
 		"must": [
@@ -86,9 +90,9 @@ def  loadNas_Details_Data4mElasticSearch():
 		
 		jsonDoc = json.loads(response.text)
 		file = open('/opt/takaful/processed-data/pattern3-nas-input.csv','w')
-		file.write("PROVIDER~PROFESSIONAL~SPECASSESSMENT~ITEMPAYERSHARE~ITEM~TREATMENTDATE~CHRONIC\n")
+		file.write("PROVIDER~PROFESSIONAL~SPECASSESSMENT~ITEMPAYERSHARE~ITEM~TREATMENTDATE~CHRONIC~BENEFICIARY~BENID\n")
 		for obj in jsonDoc['hits']['hits']:
-			row="PH01~PH02~PH03~PH04~PH05~PH06~PH07"
+			row="PH01~PH02~PH03~PH04~PH05~PH06~PH07~PH08~PH09"
 			for key,val in  obj['fields'].iteritems():
 				if  'ITEMPAYERSHARE'==key:
 					row=row.replace('PH04',val[0])
@@ -110,6 +114,12 @@ def  loadNas_Details_Data4mElasticSearch():
 				#if
 				elif  'CHRONIC'==key:
 					row=row.replace('PH07',val[0])
+				#if
+				elif  'BENEFICIARY'==key:
+					row=row.replace('PH08',val[0])
+				#if
+				elif  'EMPID'==key:
+					row=row.replace('PH09',val[0])
 				#if
 			#for
 			file.write(str(row.encode('utf-8').strip())+'\n')
@@ -172,7 +182,7 @@ def  loadAafia_Details_Data4mElasticSearch():
 	
 		query=json.dumps({
 		"size": 9000000,
-		"fields" :  ["TREATMENT DATE", "SERVICECODE","CLIENT GROUP","MEMBER NAME","CLAIM TYPE","FINAL AMT","PROVIDER GROUP","PROVIDER NAME","ATTENDING DOCTOR NAME","ICD DESCRIPTION","CURRENCY","SERVICEDESCRIPTION"],
+		"fields" :  ["TREATMENT DATE", "SERVICECODE","CLIENT GROUP","MEMBER NAME","CLAIM TYPE","FINAL AMT","PROVIDER GROUP","PROVIDER NAME","ATTENDING DOCTOR NAME","ICD DESCRIPTION","CURRENCY","SERVICEDESCRIPTION","PROVIDER TYPE","MEMBER ID NO"],
 		"query": {
 		"bool": {
 		"must": [
@@ -189,9 +199,9 @@ def  loadAafia_Details_Data4mElasticSearch():
 		jsonDoc = json.loads(response.text)
 		
 		file = open('/opt/takaful/processed-data/pattern3-aafia-input.csv','w')
-		file.write("TREATMENTDATE^SERVICECODE^CLIENTGROUP^MEMBERNAME^PROVIDERTYPE^CLAIMTYPE^FINALAMT^PROVIDERGROUP^PROVIDERNAME^ATTENDINGDOCTIRNAME^ICDDESCRIPTION^CURRENCY^SERVICEDESCRIPTION\n")
+		file.write("TREATMENTDATE^SERVICECODE^CLIENTGROUP^MEMBERNAME^PROVIDERTYPE^CLAIMTYPE^FINALAMT^PROVIDERGROUP^PROVIDERNAME^ATTENDINGDOCTIRNAME^ICDDESCRIPTION^CURRENCY^SERVICEDESCRIPTION^BENID\n")
 		for obj in jsonDoc['hits']['hits']:
-			row="PH01^PH02^PH03^PH04^PH05^PH06^PH07^PH08^PH09^PH10^PH11^PH12^PH13"
+			row="PH01^PH02^PH03^PH04^PH05^PH06^PH07^PH08^PH09^PH10^PH11^PH12^PH13^PH14"
 			for key,val in  obj['fields'].iteritems():
 				if  'TREATMENT DATE'==key:
 					row=row.replace('PH01',val[0])
@@ -231,6 +241,9 @@ def  loadAafia_Details_Data4mElasticSearch():
 				#if
 				elif  'SERVICEDESCRIPTION'==key:
 					row=row.replace('PH13',val[0].upper())
+				#if
+				elif  'MEMBER ID NO'==key:
+					row=row.replace('PH14',val[0])
 				#if
 			#for
 			file.write(str(row.encode('utf-8').strip())+'\n')
@@ -289,7 +302,7 @@ def loadNextCare4mElasticSearch():
 	try:
 		query=json.dumps({
 		"size": 9000000,
-		"fields" :  ["Provider","DischargeDate","ItemName", "SpecAssessment","PayerShare","Physician Name","ClaimCurrDesc","Service"],
+		"fields" :  ["Provider","DischargeDate","ItemName", "SpecAssessment","PayerShare","Physician Name","ClaimCurrDesc","Service","BenefName","CardNumber"],
 		"query": {
 		"bool": {
 		"should":[{ "match": { "Service":"Pharmacy and Vaccinations" }},{ "match": { "Service":"Medicine" }}],
@@ -308,9 +321,9 @@ def loadNextCare4mElasticSearch():
 		jsonDoc = json.loads(response.text)
 		
 		file = open('/opt/takaful/processed-data/pattern3-nextcare-input.csv','w')
-		file.write("PROVIDER^DISCHARGEDATE^ITEMNAME^SPECASSESSMENT^PAYERSHARE^DOCTORNAME^CURRENCY\n")
+		file.write("PROVIDER^DISCHARGEDATE^ITEMNAME^SPECASSESSMENT^PAYERSHARE^DOCTORNAME^CURRENCY^BENEFICIARY^BENID\n")
 		for obj in jsonDoc['hits']['hits']:
-			row="PH01^PH02^PH03^PH04^PH05^PH06^PH07"
+			row="PH01^PH02^PH03^PH04^PH05^PH06^PH07^PH08^PH09"
 			write2File =True
 			for key,val in  obj['fields'].iteritems():
 				if  'Service'==key:
@@ -321,6 +334,9 @@ def loadNextCare4mElasticSearch():
 				#if
 				if  'Provider'==key:
 					row=row.replace('PH01',val[0])
+				#if
+				elif  'BenefName'==key:
+					row=row.replace('PH08',val[0])
 				#if
 				elif  'DischargeDate'==key:
 					row=row.replace('PH02',val[0])
@@ -342,6 +358,9 @@ def loadNextCare4mElasticSearch():
 				#if
 				elif  'ClaimCurrDesc'==key:
 					row=row.replace('PH07',val[0])
+				#if
+				elif  'CardNumber'==key:
+					row=row.replace('PH09',val[0])
 				#if
 			#for
 			if write2File :
@@ -405,6 +424,203 @@ def mergeDatasets():
 	#finally
 #M7
 ###################################################################################################
+#M8
+def analyzeDSvsDrugAnomoly():
+	try:	
+		inputDF = pd.read_csv('/opt/takaful/processed-data/consolicated-report1.csv')
+		
+		def normalizeICD(val):
+			try:
+				if val.isdigit():
+					if val == 0:
+						return '0'
+					#if
+					else :
+						return val
+					#else
+				#if
+				else :
+					return val
+				#if
+			#try
+			except:
+				traceback.print_exc()
+			#except
+		#def
+		inputDF['ICDDESCRIPTION']=inputDF.apply(lambda row: normalizeICD(row['ICDDESCRIPTION']),axis=1)
+		
+		processdDF1 = inputDF.groupby(['ICDDESCRIPTION'])['ATTENDINGDOCTIRNAME'].nunique().reset_index()
+		processdDF1.columns=['ICDDESCRIPTION','UNIQUEDOCCOUNT']
+		processdDF1.set_index(['ICDDESCRIPTION'])
+		
+		processdDF2 = inputDF.groupby(['ICDDESCRIPTION','SERVICEDESCRIPTION'])['ATTENDINGDOCTIRNAME'].nunique().reset_index()
+		processdDF2.columns=['ICDDESCRIPTION','SERVICEDESCRIPTION','UNIQUEDSDOCCOUNT']
+		processdDF2.set_index(['ICDDESCRIPTION'])
+		def detectAnomoly(row):
+			try:
+				val = np.float(row['UNIQUEDSDOCCOUNT'])/int(row['UNIQUEDOCCOUNT'])*100
+				if val <= 10:
+					return 'T'
+				#if
+				else:
+					return 'F'
+				#if
+			#try
+			except:
+				traceback.print_exc()
+			#except	
+		#def
+		processedDF3 = pd.merge(processdDF2,processdDF1,on ='ICDDESCRIPTION',how='inner')
+		processedDF3['ISANOMOLY'] = processedDF3.apply(lambda row: detectAnomoly(row), axis=1)
+		
+		processedDF3.to_csv('/opt/takaful/processed-data/pattern3-DSvsDrugAnomoly.csv',header=True,index=False,index_label=False)
+	#try
+	except:
+		traceback.print_exc()
+	#except
+	finally:
+		print 'end of process...'
+	#finally
+#M8
+###################################################################################################
+#M9
+def analyzeDrugAbuse():
+	try:
+		restrictiveDrug = [line.strip() for line in open('/opt/takaful/processed-data/restrictive-drugs.txt','r')]
+		
+		nasDF = pd.read_csv('/opt/takaful/processed-data/pattern3-nas-input.csv',delimiter='~')
+		nasDF = nasDF[['SPECASSESSMENT','ITEM','BENEFICIARY','BENID','ITEMPAYERSHARE','TREATMENTDATE']]
+		nasDF['TPA']='NAS'
+		nasDF.dropna(subset=['SPECASSESSMENT','ITEM','BENEFICIARY','BENID','ITEMPAYERSHARE','TREATMENTDATE'],inplace=True)
+		
+		def evaluateRestrictiveDrug(val):
+			try:
+				tmp = [restrictiveDrug[i].upper() for i in range(len(restrictiveDrug)) if  restrictiveDrug[i].upper() in val.upper() ]
+				if len(tmp)>0:
+					return tmp[0]
+				#if
+				else:
+					return 'NONE'
+				#else
+			#try
+			except:
+				traceback.print_exc()
+			#except
+		#def
+		nasDF['ITEM'] = nasDF.apply(lambda row : evaluateRestrictiveDrug(row['ITEM']),axis=1)		
+		nasDF = nasDF.drop(nasDF[nasDF['ITEM'].str.contains('NONE')].index)
+		
+		def parseTimeNAS(val):
+			try:
+				obj = datetime.strptime(val,'%d-%b-%y')
+				diff =  (currentTime -obj).days
+				if diff <=360:
+					return  str(obj.year)+str(obj.month).zfill(2) 
+				#if
+				else:
+					return 'NONE'
+				#else
+			#try
+			except:
+				traceback.print_exc()
+			#except
+		#def
+		nasDF['DRUGDATE'] = nasDF.apply(lambda row : parseTimeNAS(row['TREATMENTDATE']),axis=1)		
+		nasDF = nasDF.drop(nasDF[nasDF['DRUGDATE'].str.contains('NONE')].index)
+		
+		aafiaDF = pd.read_csv('/opt/takaful/processed-data/pattern3-aafia-input.csv',delimiter='^')
+		aafiaDF = aafiaDF[['ICDDESCRIPTION','SERVICEDESCRIPTION','MEMBERNAME','BENID','FINALAMT','TREATMENTDATE']]
+		aafiaDF['TPA']='AAFIA'
+		aafiaDF.dropna(subset=['ICDDESCRIPTION','SERVICEDESCRIPTION','MEMBERNAME','BENID','FINALAMT','TREATMENTDATE'],inplace=True)
+		aafiaDF['SERVICEDESCRIPTION'] = aafiaDF.apply(lambda row : evaluateRestrictiveDrug(row['SERVICEDESCRIPTION']),axis=1)		
+		aafiaDF = aafiaDF.drop(aafiaDF[aafiaDF['SERVICEDESCRIPTION'].str.contains('NONE')].index)
+		def parseTimeAafia(val):
+			try:
+				obj = datetime.strptime(val,'%m-%d-%y')
+				diff =  (currentTime -obj).days
+				if diff <=360:
+					return  str(obj.year)+str(obj.month).zfill(2) 
+				#if
+				else:
+					return 'NONE'
+				#else
+			#try
+			except:
+				traceback.print_exc()
+			#except
+		#def
+		aafiaDF['DRUGDATE'] = aafiaDF.apply(lambda row : parseTimeAafia(row['TREATMENTDATE']),axis=1)		
+		aafiaDF = aafiaDF.drop(aafiaDF[aafiaDF['DRUGDATE'].str.contains('NONE')].index)
+		aafiaDF.columns = ['SPECASSESSMENT','ITEM','BENEFICIARY','BENID','ITEMPAYERSHARE','TREATMENTDATE','TPA','DRUGDATE']
+		
+		nextDF = pd.read_csv('/opt/takaful/processed-data/pattern3-nextcare-input.csv',delimiter='^',error_bad_lines=False)
+		nextDF = nextDF[['SPECASSESSMENT','ITEMNAME','BENEFICIARY','BENID','PAYERSHARE','DISCHARGEDATE']]
+		nextDF['TPA']='NEXTCARE'
+		nextDF.dropna(subset=['SPECASSESSMENT','ITEMNAME','BENEFICIARY','BENID','PAYERSHARE','DISCHARGEDATE'],inplace=True)
+		nextDF['ITEMNAME'] = nextDF.apply(lambda row : evaluateRestrictiveDrug(row['ITEMNAME']),axis=1)		
+		nextDF = nextDF.drop(nextDF[nextDF['ITEMNAME'].str.contains('NONE')].index)
+		def parseTimeNextCare(val):
+			try:
+				obj = datetime.strptime(val,'%d/%m/%Y')
+				diff =  (currentTime -obj).days
+				if diff <=360:
+					return  str(obj.year)+str(obj.month).zfill(2) 
+				#if
+				else:
+					return 'NONE'
+				#else
+			#try
+			except:
+				traceback.print_exc()
+			#except
+		#def
+		nextDF['DRUGDATE'] = nextDF.apply(lambda row : parseTimeNextCare(row['DISCHARGEDATE']),axis=1)		
+		nextDF = nextDF.drop(nextDF[nextDF['DRUGDATE'].str.contains('NONE')].index)
+		nextDF.columns = ['SPECASSESSMENT','ITEM','BENEFICIARY','BENID','ITEMPAYERSHARE','TREATMENTDATE','TPA','DRUGDATE']
+		
+		final = [nasDF, aafiaDF, nextDF]
+		result = pd.concat(final)
+		result.to_csv('/opt/takaful/processed-data/pattern3-drug-abuse-total.csv',header=True,index=False,index_label=False)
+		
+		result = result.groupby(['BENID','DRUGDATE']).agg({'ITEMPAYERSHARE':np.sum,'TPA':np.size}).reset_index().rename(columns={'sum':'TOTALCOST','size':'RESTRICTEDDRUGCOUNT'})
+		result.columns =['BENID','DRUGDATE','TOTALCOST','RESTRICTEDDRUGCOUNT']
+				
+		def removeUnrestrictedDrug(val):
+			try:
+				if int(val)>=1:
+					return val
+				#if
+				else:
+					return 0
+				#else
+			#try
+			except:
+				traceback.print_exc()
+			#except:
+		#def
+		result['RESTRICTEDDRUGCOUNT']= result.apply(lambda row: removeUnrestrictedDrug(row['RESTRICTEDDRUGCOUNT']),axis=1)
+		result = result.drop(result[(result['RESTRICTEDDRUGCOUNT']==0)].index)
+		result.to_csv('/opt/takaful/processed-data/pattern3-drug-abuse-calculated.csv',header=True,index=False,index_label=False)
+		
+		for key in result['BENID'].unique():
+			lst = result.ix[(result['BENID']==key)]['DRUGDATE'].tolist()
+			if len(lst)>=3:
+				print key
+				print lst
+			#if	
+			if len(lst)>1:
+				print len(lst)
+			#if
+		#for
+	#try
+	except:
+		traceback.print_exc()
+	#except
+	finally:
+		print 'end of process...'
+	#finally
+#M9
+###################################################################################################
 if __name__=='__main__':
 	if sys.argv[1]=='1':
 		loadNas_Details_Data4mElasticSearch()
@@ -426,6 +642,12 @@ if __name__=='__main__':
 	#if
 	if sys.argv[1]=='7':
 		mergeDatasets()
+	#if
+	if sys.argv[1]=='8':
+		analyzeDSvsDrugAnomoly()
+	#if
+	if sys.argv[1]=='9':
+		analyzeDrugAbuse()
 	#if
 	if sys.argv[1]=='test':
 		print standardizeICD('( J06.9-Acute upper respiratory infection; unspecified ) ( R05-Cough ) ( R50.9-Fever; unspecified )')

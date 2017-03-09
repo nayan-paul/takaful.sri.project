@@ -13,7 +13,7 @@ curl -XGET "http://localhost:9200/nas_details/nas_claim_details/_search?size=2&p
 
 4. selective filter and extract data
 
-curl -XGET 'http://localhost:9200/nas_details/nas_claim_details/_search?size=10&pretty=true' -d '
+curl -XGET 'http://localhost:9200/nas_details/nas_claim_details/_search?size=3&pretty=true' -d '
 {
 "fields" :  ["PROVIDER","PROFESSIONAL","SPECASSESSMENT","ITEMPAYERSHARE","ITEM","TREATMENTDATE","CHRONIC"],
 "query": {
