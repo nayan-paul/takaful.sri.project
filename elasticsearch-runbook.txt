@@ -62,3 +62,14 @@ curl -XGET 'http://localhost:9200/nextcare3_p2/claim/_search?size=5&pretty=true'
 }
 }'
 
+curl -XGET 'http://localhost:9200/nas_details/nas_claim_details/_search?size=9999&pretty=true' -d '
+{
+"query": {
+"bool": {
+"must": [
+{"match": {"EMPID": "103407"}},
+{"range": {"TREATMENTDATE": {"gte": "2016-06-30","lte": "2016-12-01"}}}
+]
+}
+}
+}'

@@ -507,8 +507,8 @@ def analyzeDrugAbuse():
 				traceback.print_exc()
 			#except
 		#def
-		nasDF['ITEM'] = nasDF.apply(lambda row : evaluateRestrictiveDrug(row['ITEM']),axis=1)		
-		nasDF = nasDF.drop(nasDF[nasDF['ITEM'].str.contains('NONE')].index)
+		nasDF['DRUG'] = nasDF.apply(lambda row : evaluateRestrictiveDrug(row['ITEM']),axis=1)		
+		nasDF = nasDF.drop(nasDF[nasDF['DRUG'].str.contains('NONE')].index)
 		
 		def parseTimeNAS(val):
 			try:
@@ -532,8 +532,8 @@ def analyzeDrugAbuse():
 		aafiaDF = aafiaDF[['ICDDESCRIPTION','SERVICEDESCRIPTION','MEMBERNAME','BENID','FINALAMT','TREATMENTDATE']]
 		aafiaDF['TPA']='AAFIA'
 		aafiaDF.dropna(subset=['ICDDESCRIPTION','SERVICEDESCRIPTION','MEMBERNAME','BENID','FINALAMT','TREATMENTDATE'],inplace=True)
-		aafiaDF['SERVICEDESCRIPTION'] = aafiaDF.apply(lambda row : evaluateRestrictiveDrug(row['SERVICEDESCRIPTION']),axis=1)		
-		aafiaDF = aafiaDF.drop(aafiaDF[aafiaDF['SERVICEDESCRIPTION'].str.contains('NONE')].index)
+		aafiaDF['DRUG'] = aafiaDF.apply(lambda row : evaluateRestrictiveDrug(row['SERVICEDESCRIPTION']),axis=1)		
+		aafiaDF = aafiaDF.drop(aafiaDF[aafiaDF['DRUG'].str.contains('NONE')].index)
 		def parseTimeAafia(val):
 			try:
 				obj = datetime.strptime(val,'%m-%d-%y')
@@ -551,14 +551,14 @@ def analyzeDrugAbuse():
 		#def
 		aafiaDF['DRUGDATE'] = aafiaDF.apply(lambda row : parseTimeAafia(row['TREATMENTDATE']),axis=1)		
 		aafiaDF = aafiaDF.drop(aafiaDF[aafiaDF['DRUGDATE'].str.contains('NONE')].index)
-		aafiaDF.columns = ['SPECASSESSMENT','ITEM','BENEFICIARY','BENID','ITEMPAYERSHARE','TREATMENTDATE','TPA','DRUGDATE']
+		aafiaDF.columns = ['SPECASSESSMENT','ITEM','BENEFICIARY','BENID','ITEMPAYERSHARE','TREATMENTDATE','TPA','DRUGDATE','DRUG']
 		
 		nextDF = pd.read_csv('/opt/takaful/processed-data/pattern3-nextcare-input.csv',delimiter='^',error_bad_lines=False)
 		nextDF = nextDF[['SPECASSESSMENT','ITEMNAME','BENEFICIARY','BENID','PAYERSHARE','DISCHARGEDATE']]
 		nextDF['TPA']='NEXTCARE'
 		nextDF.dropna(subset=['SPECASSESSMENT','ITEMNAME','BENEFICIARY','BENID','PAYERSHARE','DISCHARGEDATE'],inplace=True)
-		nextDF['ITEMNAME'] = nextDF.apply(lambda row : evaluateRestrictiveDrug(row['ITEMNAME']),axis=1)		
-		nextDF = nextDF.drop(nextDF[nextDF['ITEMNAME'].str.contains('NONE')].index)
+		nextDF['DRUG'] = nextDF.apply(lambda row : evaluateRestrictiveDrug(row['ITEMNAME']),axis=1)		
+		nextDF = nextDF.drop(nextDF[nextDF['DRUG'].str.contains('NONE')].index)
 		def parseTimeNextCare(val):
 			try:
 				obj = datetime.strptime(val,'%d/%m/%Y')
@@ -576,15 +576,14 @@ def analyzeDrugAbuse():
 		#def
 		nextDF['DRUGDATE'] = nextDF.apply(lambda row : parseTimeNextCare(row['DISCHARGEDATE']),axis=1)		
 		nextDF = nextDF.drop(nextDF[nextDF['DRUGDATE'].str.contains('NONE')].index)
-		nextDF.columns = ['SPECASSESSMENT','ITEM','BENEFICIARY','BENID','ITEMPAYERSHARE','TREATMENTDATE','TPA','DRUGDATE']
+		nextDF.columns = ['SPECASSESSMENT','ITEM','BENEFICIARY','BENID','ITEMPAYERSHARE','TREATMENTDATE','TPA','DRUGDATE','DRUG']
 		
 		final = [nasDF, aafiaDF, nextDF]
 		result = pd.concat(final)
-		result.to_csv('/opt/takaful/processed-data/pattern3-drug-abuse-total.csv',header=True,index=False,index_label=False)
-		
-		result = result.groupby(['BENID','DRUGDATE']).agg({'ITEMPAYERSHARE':np.sum,'TPA':np.size}).reset_index().rename(columns={'sum':'TOTALCOST','size':'RESTRICTEDDRUGCOUNT'})
-		result.columns =['BENID','DRUGDATE','TOTALCOST','RESTRICTEDDRUGCOUNT']
 				
+		result1 = result.groupby(['BENID','DRUGDATE']).agg({'ITEMPAYERSHARE':np.sum,'TPA':np.size}).reset_index().rename(columns={'sum':'TOTALCOST','size':'RESTRICTEDDRUGCOUNT'})
+		result1.columns =['BENID','DRUGDATE','TOTALCOST','RESTRICTEDDRUGCOUNT']
+		
 		def removeUnrestrictedDrug(val):
 			try:
 				if int(val)>=1:
@@ -598,20 +597,32 @@ def analyzeDrugAbuse():
 				traceback.print_exc()
 			#except:
 		#def
-		result['RESTRICTEDDRUGCOUNT']= result.apply(lambda row: removeUnrestrictedDrug(row['RESTRICTEDDRUGCOUNT']),axis=1)
-		result = result.drop(result[(result['RESTRICTEDDRUGCOUNT']==0)].index)
-		result.to_csv('/opt/takaful/processed-data/pattern3-drug-abuse-calculated.csv',header=True,index=False,index_label=False)
+		result1['RESTRICTEDDRUGCOUNT']= result1.apply(lambda row: removeUnrestrictedDrug(row['RESTRICTEDDRUGCOUNT']),axis=1)
+		result1 = result1.drop(result1[(result1['RESTRICTEDDRUGCOUNT']==0)].index)
+		result1.to_csv('/opt/takaful/processed-data/pattern3-drug-abuse-calculated.csv',header=True,index=False,index_label=False)
 		
 		for key in result['BENID'].unique():
 			lst = result.ix[(result['BENID']==key)]['DRUGDATE'].tolist()
 			if len(lst)>=3:
 				print key
-				print lst
 			#if	
-			if len(lst)>1:
-				print len(lst)
-			#if
 		#for
+		
+		finalLst = ['0C5ACCF7EAA0850E','0F619AF9E6AA0B04','103407','537774A603A05E65','54AA05E4A9F5477A','5BC2CA28EBAB007E','7E62629EB7985BB0','844F99C086654EB0','D4523FC11071BEE3','E9B7FFED430E6817']
+		def validateRDAbuseFlag(val):
+			try:
+				if any(str(val) == item for item in finalLst):
+					return 'T'
+				#if
+				return 'F'
+			#try
+			except:
+				traceback.print_exc()
+			#except
+		#def
+		result['isRestrictedDrugAbuse'] = result.apply(lambda row: validateRDAbuseFlag(row['BENID']),axis=1)
+		result = result.drop(result[result['isRestrictedDrugAbuse'].str.contains('F')].index)
+		result.to_csv('/opt/takaful/processed-data/pattern3-drug-abuse-total.csv',header=True,index=False,index_label=False)
 	#try
 	except:
 		traceback.print_exc()
@@ -620,6 +631,166 @@ def analyzeDrugAbuse():
 		print 'end of process...'
 	#finally
 #M9
+###################################################################################################
+#M10
+def createDrugAbuseReport():
+	try:
+		inputDF  = pd.read_csv('/opt/takaful/processed-data/pattern3-drug-abuse-total.csv')
+		outfile = open('/opt/takaful/processed-data/pattern3-drug-abuse-report.csv','w')
+		outfile.write("TPA~PolicyNumber~ClaimNumber~ClientGroup~Client~MemberId~MemberName~ProviderType~ProviderGroup~Provider~Diagnosis~ IP_OP~ServiceCode~ServiceDetail~ServiceType~Doctor~TreatmentDate~ClaimStatus~PaymentStatus~PaidAmount~Currency~IsRestrictedDrugAbuse\n")
+		for index,row in inputDF.iterrows():
+			BENEFICIARY,BENID,DRUG,DRUGDATE,ITEM,ITEMPAYERSHARE,SPECASSESSMENT,TPA,TREATMENTDATE,isRestrictedDrugAbuse = row
+			if TPA=='NAS':
+				query=json.dumps({
+				"size": 9000000,
+				"fields" :  ["POLICYNUMBER","CLAIMID","MASTERCONTRACT","CONTRACT","EMPID","BENEFICIARY","PROVIDERTYPE","PROVIDER","SPECASSESSMENT","ITEM","PROFESSIONAL","TREATMENTDATE","STATUS","ITEMPAYERSHARE","CURRENCY"],
+				"query": {
+				"bool": {
+				"must": [
+				{"match": {"PROVIDERTYPE": "Pharmacy"}},
+				{ "match": { "FOB":"Out-Patient" }},
+				{ "match": { "STATUS":"Settled" }},
+				{ "match": { "EMPID":BENID }},
+				{ "match": { "ITEM":ITEM }},
+				{ "match": { "TREATMENTDATE":TREATMENTDATE }},
+				]} }
+				})
+				response = requests.post('http://localhost:9200/nas_details/nas_claim_details/_search?scroll=9m', data=query)
+				
+				jsonDoc = json.loads(response.text)
+				for obj in jsonDoc['hits']['hits']:
+					line = "NAS~PH01~PH02~PH03~PH04~PH05~PH06~PH07~NA~PH08~PH09~Out-Patient~NA~PH10~MEDICINE~PH11~PH12~NA~PH13~PH14~PH15~Y"
+					for key,val in  obj['fields'].iteritems():
+						if  'POLICYNUMBER'==key:
+							line=line.replace('PH01',val[0])
+						#if
+						elif  'CLAIMID'==key:
+							line=line.replace('PH02',val[0])
+						#if
+						elif  'MASTERCONTRACT'==key:
+							line=line.replace('PH03',val[0])
+						#if
+						elif  'CONTRACT'==key:
+							line=line.replace('PH04',val[0])
+						#if
+						elif  'EMPID'==key:
+							line=line.replace('PH05',val[0])
+						#if
+						elif  'BENEFICIARY'==key:
+							line=line.replace('PH06',val[0])
+						#if
+						elif  'PROVIDERTYPE'==key:
+							line=line.replace('PH07',val[0])
+						#if
+						elif  'PROVIDER'==key:
+							line=line.replace('PH08',val[0])
+						#if
+						elif  'SPECASSESSMENT'==key:
+							line=line.replace('PH09',val[0])
+						#if
+						elif  'ITEM'==key:
+							line=line.replace('PH10',val[0])
+						#if
+						elif  'PROFESSIONAL'==key:
+							line=line.replace('PH11',val[0])
+						#if
+						elif  'TREATMENTDATE'==key:
+							line=line.replace('PH12',val[0])
+						#if
+						elif  'STATUS'==key:
+							line=line.replace('PH13',val[0])
+						#if
+						elif  'ITEMPAYERSHARE'==key:
+							line=line.replace('PH14',val[0])
+						#if
+						elif  'CURRENCY'==key:
+							line=line.replace('PH15',val[0])
+						#if
+					#for
+					outfile.write( line +'\n')
+				#for		
+			#if
+			if TPA=='NEXTCARE':
+				query=json.dumps({
+				"size": 9000000,
+				"fields" :  ["PolicyNbr","InvoiceNbr","MasterContract","Contract","CardNumber","BenefName","Provider","SpecAssesment","ServiceItem","ItemName","Physician Name","DischargeDate","ProvCheckNumber","PayerShare","ClaimCurrDesc"],
+				"query": {
+				"bool": {
+				"should":[{ "match": { "Service":"Pharmacy and Vaccinations" }},{ "match": { "Service":"Medicine" }}],
+				"must": [
+				{"match": {"ClaimStatus": "Settled"}},
+				{ "match": { "FOB":"Out-Patient" }},
+				{ "match": { "CardNumber":BENID }},
+				{ "match": { "ItemName":ITEM }},
+				{ "match": { "DischargeDate":TREATMENTDATE }},
+				],
+				"must_not": [
+				{"match": {"ProvChequeNumber": "Denied"}}
+				]
+				}
+				}
+				})
+				response = requests.post('http://localhost:9200/nextcare3_p2/claim/_search?scroll=9m', data=query)
+				jsonDoc = json.loads(response.text)
+				for obj in jsonDoc['hits']['hits']:
+					line  ="NEXTCARE~PH01~PH02~PH03~PH04~PH05~PH06~NA~NA~PH08~PH09~Out-Patient~PH10~PH11~MEDICINE~PH12~PH13~PH14~PH15~PH16~Y"
+					for key,val in  obj['fields'].iteritems():
+						if  'PolicyNbr'==key:
+							line=line.replace('PH01',val[0])
+						#if
+						elif  'InvoiceNbr'==key:
+							line=line.replace('PH02',val[0])
+						#if
+						elif  'MasterContract'==key:
+							line=line.replace('PH03',val[0])
+						#if
+						elif  'Contract'==key:
+							line=line.replace('PH04',val[0])
+						#if
+						elif  'CardNumber'==key:
+							line=line.replace('PH05',val[0])
+						#if
+						elif  'BenefName'==key:
+							line=line.replace('PH06',val[0])
+						#if
+						elif  'Provider'==key:
+							line=line.replace('PH07',val[0])
+						#if
+						elif  'SpecAssesment'==key:
+							line=line.replace('PH08',val[0])
+						#if
+						elif  'ServiceItem'==key:
+							line=line.replace('PH09',val[0])
+						#if
+						elif  'ItemName'==key:
+							line=line.replace('PH10',val[0])
+						#if
+						elif  'Physician Name'==key:
+							line=line.replace('PH11',val[0])
+						#if
+						elif  'DischargeDate'==key:
+							line=line.replace('PH12',val[0])
+						#if
+						elif  'ProvCheckNumber'==key:
+							line=line.replace('PH13',val[0])
+						#if
+						elif  'PayerShare'==key:
+							line=line.replace('PH14',val[0])
+						#if
+						elif  'ClaimCurrDesc'==key:
+							line=line.replace('PH15',val[0])
+						#if
+					#for
+					outfile.write( line +'\n')
+				#for
+			#if
+		#for
+		outfile.close()
+	#try
+	except:
+		traceback.print_exc()
+	#except
+#M10
 ###################################################################################################
 if __name__=='__main__':
 	if sys.argv[1]=='1':
@@ -648,6 +819,9 @@ if __name__=='__main__':
 	#if
 	if sys.argv[1]=='9':
 		analyzeDrugAbuse()
+	#if
+	if sys.argv[1]=='10':
+		createDrugAbuseReport()
 	#if
 	if sys.argv[1]=='test':
 		print standardizeICD('( J06.9-Acute upper respiratory infection; unspecified ) ( R05-Cough ) ( R50.9-Fever; unspecified )')
