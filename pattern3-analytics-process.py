@@ -712,7 +712,7 @@ def createDrugAbuseReport():
 			if TPA=='NEXTCARE':
 				query=json.dumps({
 				"size": 9000000,
-				"fields" :  ["PolicyNbr","InvoiceNbr","MasterContract","Contract","CardNumber","BenefName","Provider","SpecAssessment","Service Item","ItemName","Physician Name","DischargeDate","ClaimStatus","PayerShare","ClaimCurrDesc"],
+				"fields" :  ["PolicyNbr","InvoiceNbr","MasterContract","Contract","CardNumber","BenefName","Provider","SpecAssessment","Service Item","ItemName","Physician Name","DischargeDate","ProvChequeNumber","ClaimStatus","PayerShare","ClaimCurrDesc"],
 				"query": {
 				"bool": {
 				"should":[{ "match": { "Service":"Pharmacy and Vaccinations" }},{ "match": { "Service":"Medicine" }}],
@@ -732,7 +732,7 @@ def createDrugAbuseReport():
 				response = requests.post('http://localhost:9200/nextcare3_p2/claim/_search?scroll=9m', data=query)
 				jsonDoc = json.loads(response.text)
 				for obj in jsonDoc['hits']['hits']:
-					line  ="NEXTCARE~PH01~PH02~PH03~PH04~PH05~PH06~NA~NA~PH07~PH08~Out-Patient~PH09~PH10~MEDICINE~PH11~PH12~PH13~PH14~PH15~Y"
+					line  ="NEXTCARE~PH01~PH02~PH03~PH04~PH05~PH06~NA~NA~PH07~PH08~Out-Patient~PH09~PH10~MEDICINE~PH11~PH12~PH13~PH14~PH15~PH16~Y"
 					for key,val in  obj['fields'].iteritems():
 						if  'PolicyNbr'==key:
 							line=line.replace('PH01',val[0])
@@ -770,14 +770,17 @@ def createDrugAbuseReport():
 						elif  'DischargeDate'==key:
 							line=line.replace('PH12',val[0])
 						#if
-						elif  'ClaimStatus'==key:
+						elif  'ProvChequeNumber'==key:
 							line=line.replace('PH13',val[0])
 						#if
-						elif  'PayerShare'==key:
+						elif  'ClaimStatus'==key:
 							line=line.replace('PH14',val[0])
 						#if
-						elif  'ClaimCurrDesc'==key:
+						elif  'PayerShare'==key:
 							line=line.replace('PH15',val[0])
+						#if
+						elif  'ClaimCurrDesc'==key:
+							line=line.replace('PH16',val[0])
 						#if
 					#for
 					buff.write( line +'\n')
