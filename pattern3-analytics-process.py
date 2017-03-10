@@ -8,6 +8,7 @@ import spacy
 import re
 import numpy as np
 from datetime import datetime
+import StringIO
 
 #thsi process is pattern 3 for takaful search - this pattern identifies medicines vs issues.
 
@@ -636,8 +637,8 @@ def analyzeDrugAbuse():
 def createDrugAbuseReport():
 	try:
 		inputDF  = pd.read_csv('/opt/takaful/processed-data/pattern3-drug-abuse-total.csv')
-		outfile = open('/opt/takaful/processed-data/pattern3-drug-abuse-report.csv','w')
-		outfile.write("TPA~PolicyNumber~ClaimNumber~ClientGroup~Client~MemberId~MemberName~ProviderType~ProviderGroup~Provider~Diagnosis~ IP_OP~ServiceCode~ServiceDetail~ServiceType~Doctor~TreatmentDate~ClaimStatus~PaymentStatus~PaidAmount~Currency~IsRestrictedDrugAbuse\n")
+		buff = StringIO.StringIO()
+		buff.write("TPA~PolicyNumber~ClaimNumber~ClientGroup~Client~MemberId~MemberName~ProviderType~ProviderGroup~Provider~Diagnosis~ IP_OP~ServiceCode~ServiceDetail~ServiceType~Doctor~TreatmentDate~ClaimStatus~PaymentStatus~PaidAmount~Currency~IsRestrictedDrugAbuse\n")
 		for index,row in inputDF.iterrows():
 			BENEFICIARY,BENID,DRUG,DRUGDATE,ITEM,ITEMPAYERSHARE,SPECASSESSMENT,TPA,TREATMENTDATE,isRestrictedDrugAbuse = row
 			if TPA=='NAS':
@@ -705,7 +706,7 @@ def createDrugAbuseReport():
 							line=line.replace('PH15',val[0])
 						#if
 					#for
-					outfile.write( line +'\n')
+					buff.write( line +'\n')
 				#for		
 			#if
 			if TPA=='NEXTCARE':
@@ -779,11 +780,15 @@ def createDrugAbuseReport():
 							line=line.replace('PH15',val[0])
 						#if
 					#for
-					outfile.write( line +'\n')
+					buff.write( line +'\n')
 				#for
 			#if
 		#for
-		outfile.close()
+		file = open('/opt/takaful/processed-data/pattern3-drug-abuse-report.csv','w')
+		file.write(buff.getvalue())
+		file.close()
+		dataDF = pd.read_csv('/opt/takaful/processed-data/pattern3-drug-abuse-report.csv',sep='~')
+		dataDF.to_csv('/opt/takaful/processed-data/pattern3-drug-abuse-report.csv',header=True,index=False,index_label=False)
 	#try
 	except:
 		traceback.print_exc()
