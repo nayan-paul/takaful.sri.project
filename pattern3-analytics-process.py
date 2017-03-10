@@ -11,7 +11,7 @@ from datetime import datetime
 import StringIO
 
 #thsi process is pattern 3 for takaful search - this pattern identifies medicines vs issues.
-
+ 
 #grep pattern3-nextcare-report1.csv -e 'PHARMACY AND VACCINATIONS'
 #COMMON
 ###################################################################################################
