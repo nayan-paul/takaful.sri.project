@@ -673,10 +673,8 @@ def createDrugAbuseReport():
 						elif  'CONTRACT'==key:
 							line=line.replace('PH04',val[0])
 						#if
-						elif  'EMPID'==key:
-							line=line.replace('PH05',val[0])
-						#if
 						elif  'BENEFICIARY'==key:
+							line=line.replace('PH05',val[0])
 							line=line.replace('PH06',val[0])
 						#if
 						elif  'PROVIDERTYPE'==key:
@@ -713,7 +711,7 @@ def createDrugAbuseReport():
 			if TPA=='NEXTCARE':
 				query=json.dumps({
 				"size": 9000000,
-				"fields" :  ["PolicyNbr","InvoiceNbr","MasterContract","Contract","CardNumber","BenefName","Provider","SpecAssesment","ServiceItem","ItemName","Physician Name","DischargeDate","ProvCheckNumber","PayerShare","ClaimCurrDesc"],
+				"fields" :  ["PolicyNbr","InvoiceNbr","MasterContract","Contract","CardNumber","BenefName","Provider","SpecAssessment","Service Item","ItemName","Physician Name","DischargeDate","ClaimStatus","PayerShare","ClaimCurrDesc"],
 				"query": {
 				"bool": {
 				"should":[{ "match": { "Service":"Pharmacy and Vaccinations" }},{ "match": { "Service":"Medicine" }}],
@@ -733,7 +731,7 @@ def createDrugAbuseReport():
 				response = requests.post('http://localhost:9200/nextcare3_p2/claim/_search?scroll=9m', data=query)
 				jsonDoc = json.loads(response.text)
 				for obj in jsonDoc['hits']['hits']:
-					line  ="NEXTCARE~PH01~PH02~PH03~PH04~PH05~PH06~NA~NA~PH08~PH09~Out-Patient~PH10~PH11~MEDICINE~PH12~PH13~PH14~PH15~PH16~Y"
+					line  ="NEXTCARE~PH01~PH02~PH03~PH04~PH05~PH06~NA~NA~PH07~PH08~Out-Patient~PH09~PH10~MEDICINE~PH11~PH12~PH13~PH14~PH15~Y"
 					for key,val in  obj['fields'].iteritems():
 						if  'PolicyNbr'==key:
 							line=line.replace('PH01',val[0])
@@ -756,10 +754,10 @@ def createDrugAbuseReport():
 						elif  'Provider'==key:
 							line=line.replace('PH07',val[0])
 						#if
-						elif  'SpecAssesment'==key:
+						elif  'SpecAssessment'==key:
 							line=line.replace('PH08',val[0])
 						#if
-						elif  'ServiceItem'==key:
+						elif  'Service Item'==key:
 							line=line.replace('PH09',val[0])
 						#if
 						elif  'ItemName'==key:
@@ -771,7 +769,7 @@ def createDrugAbuseReport():
 						elif  'DischargeDate'==key:
 							line=line.replace('PH12',val[0])
 						#if
-						elif  'ProvCheckNumber'==key:
+						elif  'ClaimStatus'==key:
 							line=line.replace('PH13',val[0])
 						#if
 						elif  'PayerShare'==key:
