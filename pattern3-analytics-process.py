@@ -695,7 +695,7 @@ def createDrugAbuseReport():
 						#if
 						elif  'TREATMENTDATE'==key:
 							obj = datetime.strptime(val[0],'%d-%b-%y')
-							td = str(obj.month)+"/"+str(obj.day)+"/"+str(obj.year)
+							td = str(obj.day)+"/"+str(obj.month)+"/"+str(obj.year)
 							line=line.replace('PH12',td)
 						#if
 						elif  'STATUS'==key:
